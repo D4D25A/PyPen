@@ -11,7 +11,8 @@ from typing import Optional
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import Tool, TextContent
+from mcp.server.session import InitializationOptions
+from mcp.types import Tool, TextContent, ServerCapabilities
 
 from .browser import browser_manager
 from .network import network_manager
@@ -800,7 +801,24 @@ async def call_tool(name: str, arguments: dict):
 
 def main():
     """Main entry point for the MCP server."""
-    asyncio.run(stdio_server(app))
+    asyncio.run(run_server())
+
+
+async def run_server():
+    """Run the MCP server using stdio transport."""
+    async with stdio_server() as (read_stream, write_stream):
+        init_options = InitializationOptions(
+            server_name="pypen-mcp",
+            server_version="0.1.0",
+            capabilities=ServerCapabilities(
+                tools={"listChanged": False},
+            ),
+        )
+        await app.run(
+            read_stream=read_stream,
+            write_stream=write_stream,
+            initialization_options=init_options,
+        )
 
 
 if __name__ == "__main__":
