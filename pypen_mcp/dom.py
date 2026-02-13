@@ -191,7 +191,7 @@ class DOMManager:
         timeout: int = 10,
         humanize: bool = True,
     ) -> dict:
-        """Click on an element."""
+        """Click on an element. Scrolls into view first, falls back to JS click."""
         tab = browser_manager.get_tab()
         if tab is None:
             return {"status": "error", "message": "No browser tab available"}
@@ -199,10 +199,25 @@ class DOMManager:
         try:
             element = await tab.query(selector, timeout=timeout, raise_exc=False)
             if element is None:
-                return {"status": "error", "message": "Element not found"}
+                return {"status": "error", "message": f"Element not found: {selector}"}
             
-            await element.click()
-            return {"status": "success", "message": "Element clicked"}
+            # Scroll element into view first
+            try:
+                await element.scroll_into_view()
+            except Exception:
+                pass  # Best effort, continue with click anyway
+            
+            # Wait briefly for scroll/animations to settle
+            await asyncio.sleep(0.3)
+            
+            # Try simulated mouse click first (more realistic)
+            try:
+                await element.click(humanize=humanize)
+                return {"status": "success", "message": "Element clicked"}
+            except Exception:
+                # Fall back to JavaScript click (works even if element is obscured)
+                await element.click_using_js()
+                return {"status": "success", "message": "Element clicked (via JS fallback)"}
         except Exception as e:
             return {"status": "error", "message": str(e)}
     

@@ -4,8 +4,8 @@ Screenshot and debugging module for PyPen MCP.
 Provides tools for capturing screenshots and debugging browser state.
 """
 
-import os
-import base64
+
+
 from typing import Optional
 from datetime import datetime
 
@@ -15,36 +15,17 @@ from .browser import browser_manager
 class DebugManager:
     """Manages screenshots and debugging for pentesting."""
     
-    async def take_screenshot(
-        self,
-        path: Optional[str] = None,
-        full_page: bool = False,
-        as_base64: bool = False,
-    ) -> dict:
-        """Take a screenshot of the current page."""
+    async def take_screenshot(self) -> dict:
+        """Take a screenshot of the current page. Returns base64 PNG data."""
         tab = browser_manager.get_tab()
         if tab is None:
             return {"status": "error", "message": "No browser tab available"}
         
         try:
-            if as_base64:
-                b64_data = await tab.take_screenshot(as_base64=True)
-                return {
-                    "status": "success",
-                    "base64": b64_data,
-                    "format": "png",
-                }
-            
-            if path is None:
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                path = f"/tmp/pypen_screenshot_{timestamp}.png"
-            
-            await tab.take_screenshot(path=path)
-            
+            b64_data = await tab.take_screenshot(as_base64=True)
             return {
                 "status": "success",
-                "path": path,
-                "message": f"Screenshot saved to {path}",
+                "base64": b64_data,
             }
         except Exception as e:
             return {"status": "error", "message": str(e)}

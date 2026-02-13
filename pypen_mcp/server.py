@@ -12,7 +12,7 @@ from typing import Optional
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.server.session import InitializationOptions
-from mcp.types import Tool, TextContent, ServerCapabilities
+from mcp.types import Tool, TextContent, ImageContent, ServerCapabilities
 
 from .browser import browser_manager
 from .network import network_manager
@@ -210,7 +210,7 @@ async def list_tools():
         ),
         Tool(
             name="dom_click",
-            description="Click on an element",
+            description="Click on an element. IMPORTANT: You SHOULD either call debug_screenshot or view the source after every click to observe the result of the interaction.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -408,14 +408,10 @@ async def list_tools():
         # Screenshot & Debugging
         Tool(
             name="debug_screenshot",
-            description="Take a screenshot of the current page",
+            description="Take a screenshot of the current page. Returns the image directly. MUST be called after every dom_click to observe the result.",
             inputSchema={
                 "type": "object",
-                "properties": {
-                    "path": {"type": "string", "description": "File path to save screenshot"},
-                    "full_page": {"type": "boolean", "description": "Capture full page", "default": False},
-                    "as_base64": {"type": "boolean", "description": "Return as base64 string", "default": False},
-                },
+                "properties": {},
             },
         ),
         Tool(
@@ -729,11 +725,10 @@ async def call_tool(name: str, arguments: dict):
     
     # Screenshot & Debugging
     elif name == "debug_screenshot":
-        result = await debug_manager.take_screenshot(
-            path=arguments.get("path"),
-            full_page=arguments.get("full_page", False),
-            as_base64=arguments.get("as_base64", False),
-        )
+        result = await debug_manager.take_screenshot()
+        if result.get("status") == "success" and result.get("base64"):
+            return [ImageContent(type="image", data=result["base64"], mimeType="image/png")]
+        return [TextContent(type="text", text=json.dumps(result, indent=2, default=str))]
     
     elif name == "debug_get_viewport":
         result = await debug_manager.get_viewport_size()
